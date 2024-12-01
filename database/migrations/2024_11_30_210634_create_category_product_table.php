@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('product_category', function (Blueprint $table) {
+        Schema::create('category_product', function (Blueprint $table) {
             $table->foreignId('product_id')->constrained('products')->cascadeOnDelete();
             $table->foreignId('category_id')->constrained('categories')->cascadeOnDelete();
             $table->primary(['product_id', 'category_id']);

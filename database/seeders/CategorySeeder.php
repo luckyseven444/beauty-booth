@@ -4,7 +4,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-
+use App\Models\Category;
 class CategorySeeder extends Seeder
 {
     /**
@@ -12,6 +12,14 @@ class CategorySeeder extends Seeder
      */
     public function run(): void
     {
-        //
+        // Create some top-level categories
+        $topLevelCategories = Category::factory(10)->create();
+
+        // Create subcategories for each top-level category
+        foreach ($topLevelCategories as $category) {
+            Category::factory(rand(2, 5))->create([
+                'parent_id' => $category->id,
+            ]);
+        }
     }
 }
