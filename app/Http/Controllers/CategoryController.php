@@ -7,6 +7,7 @@ use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use App\Models\OrderDetail;
+use App\Models\ProductReview;
 
 class CategoryController extends Controller
 {
@@ -69,19 +70,64 @@ class CategoryController extends Controller
 
     private function getTopRatedProducts($slug)
     {
-        // Example: Fetch top-rated products from the database
-        return [];
+        $category = Category::with('products:id')->where('slug', $slug)->first();
+
+        if ($category) {
+            // Get only the product IDs as an array
+            $productIds = $category->products->pluck('id')->toArray();
+
+            $orderDetailsGrouped = ProductReview::whereIn('product_id', $productIds)
+                ->with('product')
+                ->select('product_id', \DB::raw('COUNT(*) as total'))
+                ->groupBy('product_id')
+                ->orderBy('total', 'desc')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Order details grouped by product ID successfully',
+                'data' => $orderDetailsGrouped,
+            ], 200);
+        }
     }
 
     private function getProductsPriceHighToLow($slug)
     {
-        // Example: Fetch products sorted by price (high to low) from the database
-        return [];
+        $category = Category::with('products:id')->where('slug', $slug)->first();
+
+        if ($category) {
+            // Get only the product IDs as an array
+            $productIds = $category->products->pluck('id')->toArray();
+
+            $orderDetailsGrouped = Product::whereIn('id', $productIds)
+                ->orderBy('price', 'asc')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Order details grouped by product ID successfully',
+                'data' => $orderDetailsGrouped,
+            ], 200);
+        }
     }
 
     private function getProductsPriceLowToHigh($slug)
     {
-        // Example: Fetch products sorted by price (low to high) from the database
-        return [];
+        $category = Category::with('products:id')->where('slug', $slug)->first();
+
+        if ($category) {
+            // Get only the product IDs as an array
+            $productIds = $category->products->pluck('id')->toArray();
+
+            $orderDetailsGrouped = Product::whereIn('id', $productIds)
+                ->orderBy('price', 'desc')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Order details grouped by product ID successfully',
+                'data' => $orderDetailsGrouped,
+            ], 200);
+        }
     }
 }
