@@ -13,11 +13,11 @@ class CategorySeeder extends Seeder
     public function run(): void
     {
         // Create some top-level categories
-        $topLevelCategories = Category::factory(10)->create();
+        $topLevelCategories = Category::factory(5)->create();
 
         // Create subcategories for each top-level category
         foreach ($topLevelCategories as $category) {
-            Category::factory(rand(2, 5))->create([
+            Category::factory(rand(2, 4))->create([
                 'parent_id' => $category->id,
             ]);
         }
