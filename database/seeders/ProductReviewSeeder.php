@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\ProductReview;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -12,6 +13,6 @@ class ProductReviewSeeder extends Seeder
      */
     public function run(): void
     {
-        //
+        ProductReview::factory()->count(20)->create();
     }
 }
