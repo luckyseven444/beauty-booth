@@ -8,49 +8,62 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use App\Models\OrderDetail;
 use App\Models\ProductReview;
+use Illuminate\Support\Facades\Validator;
+use Exception;
 
 class CategoryController extends Controller
 {
     public function fetchProducts($slug, Request $request)
     {
+        $validator = $this->validateSlug($slug);
+
+        if ($validator->fails()) {
+            return response()->json(['error' => $validator->errors()->first()], 400);
+        }
+
+        $category = Category::with('products:id')->where('slug', $slug)->first();
+
+        if (!$category) {
+            return response()->json(['error' => 'Category not found'], 404);
+        }
+
         $sort = $request->query('sort'); // Get the 'sort' query parameter
 
         switch ($sort) {
             case 'best_sell':
-                // Fetch best-selling products for the category
-                $products = $this->getBestSellingProducts($slug);
+                $response = $this->getBestSellingProducts($category);
                 break;
 
             case 'top_rated':
-                // Fetch top-rated products for the category
-                $products = $this->getTopRatedProducts($slug);
+                $response = $this->getTopRatedProducts($category);
                 break;
 
             case 'price_high_to_low':
-                // Fetch products sorted by price (high to low)
-                $products = $this->getProductsPriceHighToLow($slug);
+                $response = $this->getProductsPriceHighToLow($category);
                 break;
 
             case 'price_low_to_high':
-                // Fetch products sorted by price (low to high)
-                $products = $this->getProductsPriceLowToHigh($slug);
+                $response = $this->getProductsPriceLowToHigh($category);
                 break;
 
             default:
                 return response()->json(['error' => 'Invalid sort option'], 400);
         }
 
-        return response()->json($products);
+        return $response;
     }
 
-    // Add your logic for fetching the products based on sorting
-    private function getBestSellingProducts($slug): JsonResponse
+    private function validateSlug($slug)
     {
-        
-        $category = Category::with('products:id')->where('slug', $slug)->first();
+        return Validator::make(
+            ['slug' => $slug],
+            ['slug' => ['required', 'string', 'regex:/^[a-zA-Z0-9-_]+$/']]
+        );
+    }
 
-        if ($category) {
-            // Get only the product IDs as an array
+    private function getBestSellingProducts($category): JsonResponse
+    {
+        try {
             $productIds = $category->products->pluck('id')->toArray();
 
             $orderDetailsGrouped = OrderDetail::whereIn('product_id', $productIds)
@@ -62,72 +75,71 @@ class CategoryController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Order details grouped by product ID successfully',
+                'message' => 'Best-selling products fetched successfully',
                 'data' => $orderDetailsGrouped,
             ], 200);
+        } catch (Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
         }
     }
 
-    private function getTopRatedProducts($slug)
+    private function getTopRatedProducts($category): JsonResponse
     {
-        $category = Category::with('products:id')->where('slug', $slug)->first();
-
-        if ($category) {
-            // Get only the product IDs as an array
+        try {
             $productIds = $category->products->pluck('id')->toArray();
 
-            $orderDetailsGrouped = ProductReview::whereIn('product_id', $productIds)
+            $reviewsGrouped = ProductReview::whereIn('product_id', $productIds)
                 ->with('product')
-                ->select('product_id', \DB::raw('COUNT(*) as total'))
+                ->select('product_id', \DB::raw('AVG(rating) as avg_rating'))
                 ->groupBy('product_id')
-                ->orderBy('total', 'desc')
+                ->orderBy('avg_rating', 'desc')
                 ->get();
 
             return response()->json([
                 'success' => true,
-                'message' => 'Order details grouped by product ID successfully',
-                'data' => $orderDetailsGrouped,
+                'message' => 'Top-rated products fetched successfully',
+                'data' => $reviewsGrouped,
             ], 200);
+        } catch (Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
         }
     }
 
-    private function getProductsPriceHighToLow($slug)
+    private function getProductsPriceHighToLow($category): JsonResponse
     {
-        $category = Category::with('products:id')->where('slug', $slug)->first();
-
-        if ($category) {
-            // Get only the product IDs as an array
+        try {
             $productIds = $category->products->pluck('id')->toArray();
 
-            $orderDetailsGrouped = Product::whereIn('id', $productIds)
-                ->orderBy('price', 'asc')
-                ->get();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Order details grouped by product ID successfully',
-                'data' => $orderDetailsGrouped,
-            ], 200);
-        }
-    }
-
-    private function getProductsPriceLowToHigh($slug)
-    {
-        $category = Category::with('products:id')->where('slug', $slug)->first();
-
-        if ($category) {
-            // Get only the product IDs as an array
-            $productIds = $category->products->pluck('id')->toArray();
-
-            $orderDetailsGrouped = Product::whereIn('id', $productIds)
+            $products = Product::whereIn('id', $productIds)
                 ->orderBy('price', 'desc')
                 ->get();
 
             return response()->json([
                 'success' => true,
-                'message' => 'Order details grouped by product ID successfully',
-                'data' => $orderDetailsGrouped,
+                'message' => 'Products sorted by price (high to low) fetched successfully',
+                'data' => $products,
             ], 200);
+        } catch (Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    private function getProductsPriceLowToHigh($category): JsonResponse
+    {
+        try {
+            $productIds = $category->products->pluck('id')->toArray();
+
+            $products = Product::whereIn('id', $productIds)
+                ->orderBy('price', 'asc')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Products sorted by price (low to high) fetched successfully',
+                'data' => $products,
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
         }
     }
 }
